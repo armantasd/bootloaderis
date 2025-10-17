@@ -1,7 +1,7 @@
 org 0x7c00
 bits 16
 
-jmp pagrindine
+jmp pargindine
 ; si - string pointeris
 atspausdink:
 	push si
@@ -10,7 +10,7 @@ ciklas:
 	lodsb
 	cmp al, 0
 	jz baige
-	mov ah, 0x0E
+	mov ah, 0x0e
 	int 10h
 	jmp ciklas
 baige:
@@ -27,13 +27,15 @@ pargindine:
 	mov ss, ax
 	mov sp, 0x7c00
 
-	mov si, [zinute]
+	mov si, zinute
 	call atspausdink
 	
 	hlt
 
 pabaiga:
 	jmp $
+
+zinute: db "Labas", 0
 
 times 510-($-$$) db 0
 dw 0AA55h
