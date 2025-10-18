@@ -1,6 +1,6 @@
 org 0x7c00
 bits 16
-jmp short main
+jmp short start ; I had to do two jumps because jump short wasn't enough
 nop
 
 ; FAT12 header (too lazy to translate that, it's a FAT12 header anyways lol)
@@ -24,6 +24,9 @@ ebr_zyme: db 0x29
 ebr_turio_id: db 67, 67, 67, 67
 ebr_turio_zyme: db 'VIEVERSYSOS'
 ebr_sistemos_zyme: db 'FAT12   '
+
+start:
+	jmp main
 
 ; si - string pointer
 print_msg:
@@ -59,6 +62,28 @@ read_fail:
 	mov si, disk_error_msg
 ;
 
+; on the stack: buffer ptr, lba
+disk_read:
+	pusha
+	mov bp, sp
+	mov ax, word [bp+18] ; 8 16-bit registers + return address (holds lba)
+	mov bx, word [bp+20] ; same thing + lba (holds buffer)
+	xor dx, dx
+	div word [bdb_sektoriai_per_trasa] ; divide by sectors per track
+	mov cl, dl
+	inc cl
+	xor dx, dx
+	div word [bdb_pusiu_sk] ; divide by the number of heads
+	shl ax, 6
+	or cx, ax
+	shl dx, 8
+	mov ah, 2
+	mov al, 1
+	call read_sector_chs
+	jc read_fail
+	popa
+	ret
+;
 main:
 	mov ax, 0
 	mov bx, 0
@@ -70,14 +95,9 @@ main:
 	mov si, welcome_message
 	call print_msg
 
-	mov bx, 0x0500 ; set the buffer offest
-	mov dl, 0x00          ; drive 0 (floppy)
-	mov ch, 0x00          ; cylinder 0
-	mov dh, 0x00          ; head 0
-	mov cl, 0x02          ; sector 2 (sector 1 is the boot sector)
-	mov al, 1             ; read 1 sector
-	call read_sector_chs
-	jc read_fail
+	push buffer
+	push 2
+	call disk_read
 
 	hlt
 
@@ -89,3 +109,5 @@ disk_error_msg: db "Failed to read disk"
 
 times 510-($-$$) db 0
 dw 0AA55h
+
+buffer resb 512
