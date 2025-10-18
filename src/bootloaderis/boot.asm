@@ -1,9 +1,9 @@
 org 0x7c00
 bits 16
-jmp short pargindine
+jmp short main
 nop
 
-; FAT12 headeris
+; FAT12 header (too lazy to translate that, it's a FAT12 header anyways lol)
 bdb_oem: db 'MSWIN4.1'
 bdb_sektoriaus_dydis: dw 512
 bdb_sektoriai_per_clusteri: db 1
@@ -25,24 +25,41 @@ ebr_turio_id: db 67, 67, 67, 67
 ebr_turio_zyme: db 'VIEVERSYSOS'
 ebr_sistemos_zyme: db 'FAT12   '
 
-; si - string pointeris
-atspausdink:
+; si - string pointer
+print_msg:
 	push si
 	push ax
-ciklas:
+print_loop:
 	lodsb
 	cmp al, 0
-	jz baige
+	jz end_print_loop
 	mov ah, 0x0e
 	int 10h
-	jmp ciklas
-baige:
+	jmp print_loop
+end_print_loop:
 	pop ax
 	pop si
 	ret
 ;
 
-pargindine:
+; - ibrahim's disk read chs
+read_sector_chs:
+    pusha
+    mov ah, 0x02
+    int 0x13
+    jc .error
+    popa
+    clc
+    ret
+.error:
+    popa
+    stc
+    ret
+read_fail:
+	mov si, disk_error_msg
+;
+
+main:
 	mov ax, 0
 	mov bx, 0
 	mov ds, ax
@@ -50,15 +67,25 @@ pargindine:
 	mov ss, ax
 	mov sp, 0x7c00
 
-	mov si, zinute
-	call atspausdink
-	
+	mov si, welcome_message
+	call print_msg
+
+	mov bx, 0x0500 ; set the buffer offest
+	mov dl, 0x00          ; drive 0 (floppy)
+	mov ch, 0x00          ; cylinder 0
+	mov dh, 0x00          ; head 0
+	mov cl, 0x02          ; sector 2 (sector 1 is the boot sector)
+	mov al, 1             ; read 1 sector
+	call read_sector_chs
+	jc read_fail
+
 	hlt
 
-pabaiga:
+end:
 	jmp $
 
-zinute: db "Labas", 0
+welcome_message: db "Labas", 0
+disk_error_msg: db "Failed to read disk"
 
 times 510-($-$$) db 0
 dw 0AA55h
