@@ -1,3 +1,4 @@
+
 org 0x7c00
 bits 16
 jmp short start ; I had to do two jumps because jump short wasn't enough
@@ -55,19 +56,35 @@ read_sector_chs:
     clc
     ret
 .error:
-    popa
+	popa
     stc
     ret
 read_fail:
 	mov si, disk_error_msg
+	call print_msg
 ;
+
+disk_reset:
+	cmp si, 0
+	jz read_fail
+	mov ah, 0x0E
+	mov al, '.'
+	int 10h
+	mov ah, 0
+	mov dl, 0
+	int 10h
+	jc read_fail
+	dec si
+	jmp disk_retry
 
 ; on the stack: buffer ptr, lba
 disk_read:
 	pusha
+	mov si, 3
+disk_retry:
 	mov bp, sp
-	mov ax, word [bp+18] ; 8 16-bit registers + return address (holds lba)
-	mov bx, word [bp+20] ; same thing + lba (holds buffer)
+	mov ax, word [bp+20] ; 8 16-bit registers + return address (holds lba)
+	mov bx, word [bp+22] ; same thing + lba (holds buffer)
 	xor dx, dx
 	div word [bdb_sektoriai_per_trasa] ; divide by sectors per track
 	mov cl, dl
@@ -78,9 +95,9 @@ disk_read:
 	or cx, ax
 	shl dx, 8
 	mov ah, 2
-	mov al, 1
+	mov al, byte [bp+18]
 	call read_sector_chs
-	jc read_fail
+	jc disk_reset
 	popa
 	ret
 ;
@@ -95,9 +112,17 @@ main:
 	mov si, welcome_message
 	call print_msg
 
-	push buffer
-	push 2
+	push FAT_tables
+	push 1 			; position of FAT table in disk
+	push 18
 	call disk_read
+	sub sp, 6
+	
+	push root_dir
+	push 19 		; position of root entries in disk
+	push 14
+	call disk_read
+	sub sp, 6
 
 	hlt
 
@@ -110,4 +135,6 @@ disk_error_msg: db "Failed to read disk"
 times 510-($-$$) db 0
 dw 0AA55h
 
-buffer resb 512
+FAT_tables resb 9216 ; 18 sectors for FAT table
+root_dir resb 7168 ; 14 sectors for root dir entries
+kernel resb 512 ; kernel
