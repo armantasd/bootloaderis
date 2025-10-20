@@ -1,4 +1,3 @@
-
 org 0x7c00
 bits 16
 jmp short start ; I had to do two jumps because jump short wasn't enough
@@ -77,7 +76,7 @@ disk_reset:
 	dec si
 	jmp disk_retry
 
-; on the stack: buffer ptr, lba
+; on the stack: buffer ptr, lba, how many blocks to read
 disk_read:
 	pusha
 	mov si, 3
@@ -112,29 +111,88 @@ main:
 	mov si, welcome_message
 	call print_msg
 
+	; Load FAT and root dir
+
 	push FAT_tables
 	push 1 			; position of FAT table in disk
 	push 18
 	call disk_read
-	sub sp, 6
-	
+	add sp, 6
+
 	push root_dir
 	push 19 		; position of root entries in disk
 	push 14
+	call disk_read 	; add sp, 6
+
+
+	; Look for kernel
+	mov si, root_dir
+	mov cx, kernel_name
+	mov dx, 11
+strcmp_loop:
+	cmp dx, 0
+	jz match
+	lodsb
+	mov bl, byte [cx]
+	inc cx
+	dec dx
+	cmp al, bl
+	jz strcmp_loop
+	jmp not_match
+not_match:
+	add cx, 21
+	add si, 21
+	jmp strcmp_loop
+match:
+	add si, 25
+	mov ax, word [si]
+	
+	; Load clusters (ax - cluster)
+clstrld_loop:
+	; 1.LOAD DATA:
+	push kernel
+	; quick lba calculation
+	sub ax, 2
+	mov bx, 2
+	mul bx
+	add ax, 33 ; 33 base data for FAT, reserved and root dir
+	;
+	push ax
+	push 2
 	call disk_read
 	sub sp, 6
+	; 2.FIND CLUSTER ON FAT:
+	mov si, FAT_tables
+	mov bx, ax
+	mov cx, 2
+	div cx
+	add ax, bx
+	cmp dx, 1
+	jz odd
+	add si, ax
+	lodsw
+	and ax, 0b0000111111111111
+	jmp done_calc
+odd:
+	add si, ax
+	inc si
+	lodsw
+	shl 4
+done_calc:
+	cmp ax, 0xfff
+	jz end_boot
+	jmp clstrld_loop
 
-	hlt
-
-end:
+end_boot:
 	jmp $
 
 welcome_message: db "Labas", 0
 disk_error_msg: db "Failed to read disk"
+kernel_name: db "KERNELISBIN"
 
 times 510-($-$$) db 0
 dw 0AA55h
 
-FAT_tables resb 9216 ; 18 sectors for FAT table
-root_dir resb 7168 ; 14 sectors for root dir entries
-kernel resb 512 ; kernel
+FAT_tables equ 0x7e00 ; 18 sectors for FAT table
+root_dir equ 0xa200 ; 14 sectors for root dir entries
+kernel equ 0xb000 ; kernel
