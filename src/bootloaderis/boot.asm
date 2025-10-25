@@ -127,30 +127,33 @@ main:
 
 	; Look for kernel
 	mov si, root_dir
-	mov cx, kernel_name
-	mov dx, 11
+	mov di, kernel_name
+	mov dx, 12
 strcmp_loop:
 	cmp dx, 0
 	jz match
 	lodsb
-	mov bl, byte [cx]
-	inc cx
+	mov bl, byte [di]
+	inc di
 	dec dx
 	cmp al, bl
 	jz strcmp_loop
 	jmp not_match
 not_match:
-	add cx, 21
-	add si, 21
+	add di, dx
+	sub di, 12
+	add si, dx
+	add si, 20
 	jmp strcmp_loop
 match:
-	add si, 25
+	add si, 15
 	mov ax, word [si]
 	
 	; Load clusters (ax - cluster)
 clstrld_loop:
 	; 1.LOAD DATA:
 	push kernel
+	mov di, ax
 	; quick lba calculation
 	sub ax, 2
 	mov bx, 2
@@ -163,7 +166,8 @@ clstrld_loop:
 	sub sp, 6
 	; 2.FIND CLUSTER ON FAT:
 	mov si, FAT_tables
-	mov bx, ax
+	mov ax, di
+	mov bx, di
 	mov cx, 2
 	div cx
 	add ax, bx
@@ -177,17 +181,17 @@ odd:
 	add si, ax
 	inc si
 	lodsw
-	shl 4
+	shl ax, 4
 done_calc:
 	cmp ax, 0xfff
 	jz end_boot
 	jmp clstrld_loop
 
 end_boot:
-	jmp $
+	jmp kernel
 
-welcome_message: db "Labas", 0
-disk_error_msg: db "Failed to read disk"
+welcome_message: db "Labas", 0x0D, 0xA, 0
+disk_error_msg: db "Failed to read disk", 0x0D, 0xA, 0
 kernel_name: db "KERNELISBIN"
 
 times 510-($-$$) db 0

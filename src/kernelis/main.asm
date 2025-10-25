@@ -1,4 +1,4 @@
-org 0x7c00
+org 0xb000
 bits 16
 
 jmp pargindine
@@ -35,7 +35,7 @@ pargindine:
 pabaiga:
 	jmp $
 
-zinute: db "Labas", 0
+zinute: db "Labas is kernelio!", 0x0D, 0xA, 0
 
 times 510-($-$$) db 0
 dw 0AA55h
