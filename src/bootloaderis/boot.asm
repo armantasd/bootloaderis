@@ -61,6 +61,8 @@ read_sector_chs:
 read_fail:
 	mov si, disk_error_msg
 	call print_msg
+	hlt
+	jmp $
 ;
 
 disk_reset:
@@ -122,8 +124,8 @@ main:
 	push root_dir
 	push 19 		; position of root entries in disk
 	push 14
-	call disk_read 	; add sp, 6
-
+	call disk_read
+	add sp, 6
 
 	; Look for kernel
 	mov si, root_dir
@@ -150,20 +152,20 @@ match:
 	mov ax, word [si]
 	
 	; Load clusters (ax - cluster)
+	mov bp, kernel
 clstrld_loop:
 	; 1.LOAD DATA:
-	push kernel
+	push bp
 	mov di, ax
 	; quick lba calculation
 	sub ax, 2
-	mov bx, 2
-	mul bx
+	shl ax, 1
 	add ax, 33 ; 33 base data for FAT, reserved and root dir
 	;
 	push ax
 	push 2
 	call disk_read
-	sub sp, 6
+	add sp, 6
 	; 2.FIND CLUSTER ON FAT:
 	mov si, FAT_tables
 	mov ax, di
@@ -179,12 +181,12 @@ clstrld_loop:
 	jmp done_calc
 odd:
 	add si, ax
-	inc si
 	lodsw
-	shl ax, 4
+	shr ax, 4
 done_calc:
 	cmp ax, 0xfff
 	jz end_boot
+	add bp, 1024
 	jmp clstrld_loop
 
 end_boot:

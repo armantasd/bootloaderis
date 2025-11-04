@@ -1,7 +1,9 @@
 ASM=nasm
-
+CMPL=i686-elf-gcc
+LD=i686-elf-ld
 SRC_DIR=src
 BUILD_DIR=build
+OCPY=i686-elf-objcopy
 
 .PHONY: all floppy_image kernelis bootloaderis clean always
 
@@ -22,8 +24,12 @@ kernelis: $(BUILD_DIR)/kernelis.bin
 
 
 $(BUILD_DIR)/kernelis.bin: always
-	$(ASM) $(SRC_DIR)/kernelis/main.asm -fbin -o $(BUILD_DIR)/kernelis.bin
-
+	$(ASM) $(SRC_DIR)/kernelis/bootstrap.asm -fbin -o $(BUILD_DIR)/bootstrap.bin
+	$(ASM) -felf32 $(SRC_DIR)/kernelis/main.asm -o $(BUILD_DIR)/main.o
+	$(CMPL) -ffreestanding -m32 -nostdlib -c $(SRC_DIR)/kernelis/kernelis.c -o $(BUILD_DIR)/kernelis.o
+	$(LD) -T $(SRC_DIR)/link.ld -o $(BUILD_DIR)/kernelis.elf $(BUILD_DIR)/main.o $(BUILD_DIR)/kernelis.o
+	$(OCPY) -O binary $(BUILD_DIR)/kernelis.elf $(BUILD_DIR)/kernelis_body.bin
+	cat $(BUILD_DIR)/bootstrap.bin $(BUILD_DIR)/kernelis_body.bin > $(BUILD_DIR)/kernelis.bin
 always:
 	mkdir -p $(BUILD_DIR)
 
