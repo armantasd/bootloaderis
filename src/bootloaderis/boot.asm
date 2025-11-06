@@ -109,10 +109,6 @@ main:
 	mov es, ax
 	mov ss, ax
 	mov sp, 0x7c00
-
-	mov si, welcome_message
-	call print_msg
-
 	; Load FAT and root dir
 
 	push FAT_tables

@@ -100,6 +100,9 @@ sgdt_descriptor:
 	dd sgdt_start
 
 pargindine:
+	; clear VGA
+	mov ax, 0x0003
+	int 0x10
 	; switch to 32 bit
 	cli
 	lgdt [gdt_descriptor]
