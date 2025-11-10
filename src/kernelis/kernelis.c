@@ -1,11 +1,7 @@
-extern void prtchr(char c, int index);
-
+extern void prtchr(char* c, int index);
+extern void print(char buffer[], void* argv);
 void kernel_main()
 {
-	prtchr('S', 0);
-	prtchr('I', 2);
-	prtchr('G', 4);
-	prtchr('M', 6);
-	prtchr('A', 8);
+	print("SIGMA", 0);
 	return;
 }

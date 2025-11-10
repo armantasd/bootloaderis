@@ -107,7 +107,7 @@ pargindine:
 	cli
 	lgdt [gdt_descriptor]
 	xor ax, ax
-	mov bx, 0x10
+	mov bx, 0x0
 	mov fs, bx
 	mov gs, bx
 	mov ds, bx

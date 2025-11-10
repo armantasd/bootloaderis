@@ -8,7 +8,7 @@ _start:
 	mov al, 0x0E
 	out dx, al
 	inc dx
-	mov al, 0
+	mov al, 2
 	out dx, al
 	dec dx
 	mov al, 0x0F
